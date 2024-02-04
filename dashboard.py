@@ -1,11 +1,11 @@
-import pickle
 import logging
+import pickle
 
 import dash_bootstrap_components as dbc
 import requests
 import tensorflow as tf
 from bs4 import BeautifulSoup
-from dash import Dash, Output, Input, html, dcc, ctx, State
+from dash import Dash, Output, Input, html, dcc, State
 from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
 
 # Initialize the Dash app with external stylesheets
@@ -51,7 +51,12 @@ def classify_paper(title, abstract):
         text = title + abstract
         v = vect([text])
         pred = checkpoint.predict(v, verbose=0)
-
+        thr = {"Computer Science": 0.876895546913147,
+               "Physics": 0.656355619430542,
+               "Mathematics": 0.4521518647670746,
+               "Statistics": 0.6383729577064514,
+               "Quantitative Biology": 0.1292726695537567,
+               "Quantitative Finance": 0.048446375876665115}
         result = "Paper has been classified as: "
         categories = []
 
@@ -121,4 +126,4 @@ def update_output(n_clicks, ieee_link):
 
 
 if __name__ == "__main__":
-    app.run_server(threaded=True)
+    app.run_server(debug=True, threaded=True)
