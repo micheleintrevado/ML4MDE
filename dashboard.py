@@ -1,5 +1,6 @@
 import logging
 import pickle
+import re
 
 import dash_bootstrap_components as dbc
 import requests
@@ -7,7 +8,12 @@ import tensorflow as tf
 from bs4 import BeautifulSoup
 from dash import Dash, Output, Input, html, dcc, State
 from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
+import nltk
+from nltk.corpus import stopwords
 
+nltk.download('stopwords')
+
+stop_words = set(stopwords.words('english'))
 # Initialize the Dash app with external stylesheets
 app = Dash(name=__name__, external_stylesheets=[dbc.themes.LUX])
 
@@ -20,6 +26,59 @@ from_disk = pickle.load(open("vectorization.pkl", "rb"))
 vect = TextVectorization.from_config(from_disk['config'])
 vect.adapt(tf.data.Dataset.from_tensor_slices(["xyz"]))
 vect.set_weights(from_disk['weights'])
+
+
+def prepare_text(text: str):
+    contractions_dict = {
+        "don't": "do not",
+        "doesn't": "does not",
+        "can't": "cannot",
+        "isn't": "is not",
+        "won't": "will not",
+        "wasn't": "was not",
+        "weren't": "were not",
+        "haven't": "have not",
+        "hasn't": "has not",
+        "hadn't": "had not",
+        "couldn't": "could not",
+        "shouldn't": "should not",
+        "wouldn't": "would not",
+        "it's": "it is",
+        "I'm": "I am",
+        "you're": "you are",
+        "he's": "he is",
+        "she's": "she is",
+        "we're": "we are",
+        "they're": "they are",
+        "I've": "I have",
+        "you've": "you have",
+        "we've": "we have",
+        "they've": "they have",
+        "I'll": "I will",
+        "you'll": "you will",
+        "he'll": "he will",
+        "she'll": "she will",
+        "we'll": "we will",
+        "they'll": "they will",
+        "I'd": "I would",
+        "you'd": "you would",
+        "he'd": "he would",
+        "she'd": "she would",
+        "we'd": "we would",
+        "they'd": "they would",
+        "I won't": "I will not",
+        "you won't": "you will not",
+        "he won't": "he will not",
+        "she won't": "she will not",
+        "we won't": "we will not",
+        "they won't": "they will not",
+    }
+    text = text.lower()
+    text = text.replace('"', '')
+    text = re.sub("[^a-zA-Z]", " ", text)
+    text = " ".join([contractions_dict.get(word, word) for word in text.split()])
+    words = [word for word in text.split() if word not in stop_words and len(word) > 1]
+    return " ".join(words).strip()
 
 
 # Function to extract title and abstract from IEEE link
@@ -63,7 +122,7 @@ def classify_paper(title, abstract):
         for index, label in enumerate(
                 ["Computer Science", "Physics", "Mathematics", "Statistics", "Quantitative Biology",
                  "Quantitative Finance"]):
-            if pred[0][index] > 0.2:
+            if pred[0][index] > thr[label]:
                 categories.append(label)
         if len(categories) == 0:
             return "Not in the model categories"
